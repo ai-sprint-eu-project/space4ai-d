@@ -1,0 +1,225 @@
+{
+    "Components": {
+        "c1": {
+            "memory": 0
+        },
+        "c2": {
+            "memory": 0
+        },
+        "c3": {
+            "memory": 0
+        },
+        "c4": {
+            "memory": 0
+        },
+        "c5": {
+            "memory": 0
+        }
+    },
+    "EdgeResources": {
+        "computationallayer1": {
+            "Drone1": {
+                "description": "Without GPU ",
+                "number": 1,
+                "cost": 4.5454,
+                "memory": 100
+            },
+            "Drone2": {
+                "description": "With GPU ",
+                "number": 1,
+                "cost": 6.8181,
+                "memory": 100
+            }
+        },
+        "computationallayer2": {
+            "EN1": {
+                "description": "Asus Zenbook 13 UX325EA",
+                "number": 1,
+                "cost": 4.5454,
+                "memory": 100
+            },
+            "EN2": {
+                "description": "Microsoft Surface Studio 2 LAM-00005 ",
+                "number": 1,
+                "cost": 9.6909,
+                "memory": 100
+            }
+        }
+    },
+    "CloudResources": {
+        "computationallayer3": {
+            "VM1": {
+                "description": "AWS g3s.xlarge",
+                "number": 3,
+                "cost": 0.75,
+                "memory": 100
+            },
+            "VM2": {
+                "description": "AWS g3.4xlarge",
+                "number": 4,
+                "cost": 1.14,
+                "memory": 100
+            }
+        }
+    },
+    "FaaSResources": {
+        "computationallayer4": {
+            "F1": {
+                "cost": 0.06003,
+                "memory": 100,
+                "idle_time_before_kill": 600
+            },
+            "F2": {
+                "cost": 0.54027,
+                "memory": 100,
+                "idle_time_before_kill": 600
+            },
+            "F3": {
+                "cost": 0.162081,
+                "memory": 100,
+                "idle_time_before_kill": 600
+            },
+            "F4": {
+                "cost": 0.96048,
+                "memory": 100,
+                "idle_time_before_kill": 600
+            },
+            "F5": {
+                "cost": 0.828,
+                "memory": 100,
+                "idle_time_before_kill": 600
+            }
+        },
+        "transition_cost": 0
+    },
+    "CompatibilityMatrix": {
+        "c1": [
+            "Drone1",
+            "Drone2"
+        ],
+        "c2": [
+            "EN1",
+            "EN2"
+        ],
+        "c3": [
+            "EN1",
+            "EN2"
+        ],
+        "c4": [
+            "VM1",
+            "VM2"
+        ],
+        "c5": [
+            "F4",
+            "F5"
+        ]
+    },
+    "DemandMatrix": {
+        "c1": {
+            "Drone1": 1.26,
+            "Drone2": 1
+        },
+        "c2": {
+            "EN1": 1,
+            "EN2": 0.05
+        },
+        "c3": {
+            "EN1": 5,
+            "EN2": 0.5
+        },
+        "c4": {
+            "VM1": 0.03375,
+            "VM2": 0.027
+        },
+        "c5": {
+            "F4": [
+                4,
+                4.8
+            ],
+            "F5": [
+                2.3,
+                2.76
+            ]
+        }
+    },
+    "Lambda": 0.48999999999999977,
+    "LocalConstraints": {
+        "c5": {
+            "local_res_time": 100
+        }
+    },
+    "GlobalConstraints": {
+        "p1": {
+            "components": [
+                "c1",
+                "c2",
+                "c3",
+                "c4"
+            ],
+            "global_res_time": 100
+        }
+    },
+    "NetworkTechnology": {
+        "ND1": {
+            "computationallayers": [
+                "computationallayer1",
+                "computationallayer2"
+            ],
+            "AccessDelay": 0.000277,
+            "Bandwidth": 150
+        },
+        "ND2": {
+            "computationallayers": [
+                "computationallayer1",
+                "computationallayer2",
+                "computationallayer3",
+                "computationallayer4"
+            ],
+            "AccessDelay": 0.000277,
+            "Bandwidth": 4000
+        },
+        "ND3": {
+            "computationallayers": [
+                "computationallayer3",
+                "computationallayer4"
+            ],
+            "AccessDelay": 0,
+            "Bandwidth": 1000000
+        }
+    },
+    "DataTransfer": {
+        "c1": {
+            "next": [
+                "c2"
+            ],
+            "data_size": [
+                4
+            ]
+        },
+        "c2": {
+            "next": [
+                "c3"
+            ],
+            "data_size": [
+                6
+            ]
+        },
+        "c3": {
+            "next": [
+                "c4"
+            ],
+            "data_size": [
+                4
+            ]
+        },
+        "c4": {
+            "next": [
+                "c5"
+            ],
+            "data_size": [
+                4
+            ]
+        }
+    },
+    "Time": 1
+}

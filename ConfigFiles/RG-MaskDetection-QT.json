@@ -1,0 +1,107 @@
+{
+  "Components":
+  {
+    "c1":
+    {
+      "s1":
+      {
+        "h1":
+        {
+          "memory": 1024, 
+          "next": "c2", 
+          "early_exit_probability": 0, 
+          "data_size":4500
+        }
+      }
+    },
+    "c2":
+    {
+      "s1":
+      {
+        "h1":
+        {
+          "memory": 2048,
+          "next": "", 
+          "early_exit_probability": 0,
+          "data_size":0
+        }
+      }
+    }
+  },
+  "EdgeResources":
+  {
+    "computationallayer1":
+    {
+      "RasPi":
+      {
+        "description": "Raspberry PIs 4 Model B  ",
+        "number":1,
+        "cost": 0.0375,
+        "memory":4096,
+        "n_cores": 4
+      }
+    }
+  },
+  "CloudResources":
+  {
+    "computationallayer2":
+    {
+      "VM1":
+      {
+        "description": "AWS g3s.xlarge", 
+        "number": 1,
+        "cost": 0.75,
+        "memory":8192,
+        "n_cores": 4
+      }
+    }
+  },
+  "CompatibilityMatrix":
+  {
+    "c1":
+    {
+      "h1": ["RasPi"]
+    },
+    "c2":
+    {
+      "h1": ["RasPi","VM1"]
+    }
+  },
+  "Performance":
+  {
+    "c1":
+    {
+      "h1":
+      {
+        "RasPi": {
+          "model": "QTedge",
+          "demand": 225.75
+        }
+      }
+    },
+    "c2":
+    {
+      "h1":
+      {
+        "RasPi": {
+          "model": "QTedge",
+          "demand": 200
+        }, 
+        "VM1": {
+          "model": "QTcloud",
+          "demand": 300
+        }
+      }
+    }
+  },
+   "Lambda": 0.002,
+   "LocalConstraints":{ "c1":{ "local_res_time": 500}
+                      },
+   "GlobalConstraints":{ "p1":{ "components":["c1","c2"], "global_res_time":5000}
+                        },
+   "NetworkTechnology":{ "ND2":{ "computationallayers":["computationallayer1","computationallayer2"], "AccessDelay":0.00000277, "Bandwidth":10000}
+                        },
+   "DirectedAcyclicGraph":{ "c1":{ "next":["c2"], "transition_probability":[1]}
+                           },
+   "Time":1
+}

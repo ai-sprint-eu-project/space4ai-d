@@ -1,0 +1,19 @@
+{
+  "LambdaBound":
+  {
+    "start": 0.5, 
+    "end": 0.6, 
+    "step": 0.1
+  },
+  "BandwidthScenario": 
+  {
+    "5G_4gb": 
+    {
+      "bandwidth": 4000
+    }
+  },
+  "IterationNumber": 1000,
+  "Seed": 2,
+  "Method": "RandomGreedy"
+}
+

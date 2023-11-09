@@ -1,0 +1,5 @@
+PROJECT_NAME     = SPACE4AI-D
+INPUT		 = classes/
+EXCLUDE          = classes/__*
+OUTPUT_DIRECTORY = doc
+OPTIMIZE_OUTPUT_JAVA = YES
