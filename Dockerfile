@@ -1,11 +1,9 @@
-FROM ubuntu:20.04 AS base
+FROM python:3.8-slim AS base
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y graphviz \
 			graphviz-dev \
 			doxygen nano \
-			git \
-        		python3-dev \
-        		python3-pip
+			git 
 RUN python3 -m pip install --upgrade pip
 
 WORKDIR /home/SPACE4AI-D
