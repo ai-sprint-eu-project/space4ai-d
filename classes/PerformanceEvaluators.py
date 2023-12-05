@@ -1,4 +1,5 @@
-from classes.Logger import Logger
+from external import space4ai_logger
+
 from classes.PerformanceModels import BasePerformanceModel
 from abc import abstractmethod
 import numpy as np
@@ -249,9 +250,8 @@ class SystemPerformanceEvaluator:
     ## SystemPerformanceEvaluator class constructor
     #   @param self The object pointer
     #   @param log Object of Logger type
-    def __init__(self, log=Logger()):
+    def __init__(self, log=space4ai_logger.Logger(name="SPACE4AI-D-SystemPE")):
         self.logger = log
-        self.error = Logger(stream=sys.stderr, verbose=1, error=True)
     
     
     ## Method to evaluate the response time of the Graph.Component object 
@@ -275,15 +275,12 @@ class SystemPerformanceEvaluator:
         j = np.nonzero(Y_hat[c_idx])
         
         # loop over all partitions
-        self.logger.level += 1
-
         prev_parts_idx = []
         for h in range(len(j[0])):
             # evaluate the response time
             p_idx = j[0][h]
             r_idx = j[1][h]
             self.logger.log("Evaluating partition response times", 6)
-            self.logger.level += 1
             if r_idx < S.FaaS_start_index:
                 PM = S.performance_models[c_idx][p_idx][r_idx]
                 features = PM.get_features(c_idx=c_idx, p_idx=p_idx,
@@ -293,7 +290,6 @@ class SystemPerformanceEvaluator:
             else:
                 p = S.demand_matrix[c_idx][p_idx,r_idx]
             self.logger.log("(h:{}, j:{}) --> {}".format(h, r_idx, p), 7)
-            self.logger.level -= 1
             self.logger.log("time --> {}".format(p), 6)
             if len(prev_parts_idx) == 0:
                 perf_evaluation += p
@@ -306,17 +302,14 @@ class SystemPerformanceEvaluator:
                 network_delay = 0
                 # check if two partitions are in the same device
                 self.logger.log("Evaluating network delay", 6)
-                self.logger.level += 1
                 if not j[1][h-1] == j[1][h]:
                     # get the data transferred from the partition
                     data_size = S.components[c_idx].partitions[j[0][h-1]].data_size[0]
                     # compute the network transfer time
                     network_delay = self.get_network_delay(j[1][h-1], j[1][h], S, data_size)
                     self.logger.log("{} --> {}".format(h, network_delay), 7)
-                self.logger.level -= 1
                 self.logger.log("time --> {}".format(network_delay), 6)
                 perf_evaluation += early_exit_prob * (p + network_delay)
-        self.logger.level -= 1
         self.logger.log("time --> {}".format(perf_evaluation), 5)
 
         
@@ -362,7 +355,7 @@ class SystemPerformanceEvaluator:
         # there must exist a common network domain, otherwise the components
         # cannot communicate with each other
         if len(ND) == 0:
-            self.error.log("ERROR: no network domain available between {} and {}".\
+            self.logger.err("ERROR: no network domain available between {} and {}".\
                            format(cpm1_resource, cpm2_resource))
             sys.exit(1)
         # if only one domain is common to the two layers, evaluate the 

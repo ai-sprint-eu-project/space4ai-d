@@ -1,10 +1,11 @@
+from external import space4ai_logger
+
 from classes.Algorithm import BaseAlgorithm
 from abc import abstractmethod
 import numpy as np
 import copy
 from classes.Solution import Configuration, Result
 from classes.PerformanceEvaluators import ServerFarmPE, EdgePE
-from classes.Logger import Logger
 import sys
 import math
 import time
@@ -30,11 +31,14 @@ class BaseHeuristics(BaseAlgorithm):
     #   @param keyword Keyword identifying the heuristic methods
     #   @param log Object of Logger.Logger type
     #   @param **kwargs Additional keyword
-    def __init__(self, system, keyword, log, **kwargs):
+    def __init__(
+            self, system, keyword, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-BaseHeuristics"), 
+            **kwargs
+        ):
         super().__init__(keyword)
         self.system = system
         self.logger = log
-        self.error = Logger(stream=sys.stderr, verbose=1, error=True)
         self.model = self.find_model_to_sort_res()
         self.verbose = True
         self.counter_obj_evaluation = 0
@@ -83,7 +87,7 @@ class BaseHeuristics(BaseAlgorithm):
             C = data["components"]
             Y_hat = []
         else:
-            self.error.log("ERROR: no components available in solution file", 1)
+            self.logger.err("ERROR: no components available in solution file", 1)
             sys.exit(1)
         # loop over all components
         I = len(self.system.components)
@@ -98,7 +102,7 @@ class BaseHeuristics(BaseAlgorithm):
             if c in self.system.dic_map_com_idx.keys():
                 comp_idx = self.system.dic_map_com_idx[c]
             else:
-                self.error.log("ERROR: the component does not exist in the system", 1)
+                self.logger.err("ERROR: the component does not exist in the system", 1)
                 sys.exit(1)
             dep_included = False
             # loop over deployments
@@ -121,12 +125,12 @@ class BaseHeuristics(BaseAlgorithm):
                                 number = 1
                             Y_hat[comp_idx][part_idx][res_idx] = number
                     if not part_included:
-                        self.error.log(
+                        self.logger.err(
                             "ERROR: there is no selected partition for component " + c + " and deployment " + s + " in the solution file",
                             1)
                         sys.exit(1)
             if not dep_included:
-                self.error.log(
+                self.logger.err(
                     "ERROR: there is no selected deployment for component " + c + " in the solution file", 1)
                 sys.exit(1)
         result = Result(self.logger)
@@ -842,7 +846,11 @@ class BinarySearch(BaseHeuristics):
     #   @param system_file A system json file
     #   @param solution_file A solution json file
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, system_file, solution_file, log=Logger(), **kwargs):
+    def __init__(
+            self, system, system_file, solution_file, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-BinarySearch"), 
+            **kwargs
+        ):
         BaseHeuristics.__init__(self, system, "BinarySearch", log)
         self.system_file = system_file
         self.solution_file = solution_file
@@ -895,7 +903,7 @@ class BinarySearch(BaseHeuristics):
 
             else:
                 if self.system.Lambda == initial_lambda:
-                    self.error.log("ERROR: The solution with initial Lambda and maximum number of resources is not feasible")
+                    self.logger.err("ERROR: The solution with initial Lambda and maximum number of resources is not feasible")
                     sys.exit(1)
                 else:
                     next_lambda = (highest_feasible_lambda + self.system.Lambda) / 2

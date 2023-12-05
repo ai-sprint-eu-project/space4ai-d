@@ -1,4 +1,5 @@
-from classes.Logger import Logger
+from external import space4ai_logger
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import sys
@@ -26,9 +27,11 @@ class DAG:
     #   @param graph_file File describing the graph (gml or text format)
     #   @param graph_dict Dictionary describing the graph
     #   @param log Object of Logger class
-    def __init__(self, graph_file = "", graph_dict = None, log = Logger()):
+    def __init__(
+            self, graph_file = "", graph_dict = None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-DAG")
+        ):
         self.logger = log
-        self.error = Logger(stream=sys.stderr, verbose=1)
         if graph_file != "":
             self.logger.log("Loading DAG from file", 2)
             self.read_DAG_file(graph_file)
@@ -36,7 +39,7 @@ class DAG:
             self.logger.log("Loading DAG dictionary", 2)
             self.read_DAG(graph_dict)
         else:
-            self.error.log("ERROR: no DAG provided", 1)
+            self.logger.err("ERROR: no DAG provided", 1)
             sys.exit(1)
           
     
@@ -104,14 +107,14 @@ class DAG:
                                             transition_probability=probability, 
                                             data_size=0)
                     else:
-                         self.error.log("ERROR: no match between components list and probabilities list", 1)
+                         self.logger.err("ERROR: no match between components list and probabilities list", 1)
                          sys.exit(1)
                 # otherwise, check if the graph is made by a unique component
                 else:
                     if len(graph_dict) > 0:
                         self.G.add_node(c)
                     else:
-                        self.error.log("ERROR: there is not any component in DAG", 1)
+                        self.logger.err("ERROR: there is not any component in DAG", 1)
                         sys.exit(1)
     
 

@@ -1,11 +1,13 @@
-from Solid.Solid.TabuSearch import TabuSearch
-from Solid.Solid.SimulatedAnnealing import SimulatedAnnealing
-from Solid.Solid.GeneticAlgorithm import GeneticAlgorithm
+from external import space4ai_logger
+
+from external.Solid.Solid.TabuSearch import TabuSearch
+from external.Solid.Solid.SimulatedAnnealing import SimulatedAnnealing
+from external.Solid.Solid.GeneticAlgorithm import GeneticAlgorithm
+
 from classes.BaseHeuristics import BaseHeuristics
-from classes.Logger import Logger
+from classes.Solution import Configuration, Result
 import numpy as np
 import copy
-from classes.Solution import Configuration, Result
 import time
 
 ## Tabu Search
@@ -26,8 +28,12 @@ class Tabu_Search(BaseHeuristics, TabuSearch):
     #   @param tabu_size The size of Tabu list
     #   @param max_score Maximum score that the algorithm will stop when it has been reached
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, max_time, max_steps, initial_state,
-                 tabu_size, max_score=None, log=Logger(), **kwargs):
+    def __init__(
+            self, system, max_time, max_steps, 
+            initial_state, tabu_size, max_score=None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-Tabu_Search"), 
+            **kwargs
+        ):
         BaseHeuristics.__init__(self, system, "TabuSearch", log)
         TabuSearch.__init__(self, initial_state, tabu_size, max_steps, max_time, max_score)
         self.method = "random"
@@ -56,7 +62,6 @@ class Tabu_Search(BaseHeuristics, TabuSearch):
     #           3) The list of best costs obtained so far (up to each current step)
     #           4) The list of time corresponding to each step
     def run_algorithm(self, **kwargs):
-        self.logger.level += 1
         self.logger.log("Run Tabu Search", 3)
         best_solution, best_cost, current_cost_list, best_cost_list, time_list = self.run(self.verbose, self.method)
         # initialize results
@@ -72,8 +77,6 @@ class Tabu_Search(BaseHeuristics, TabuSearch):
             self.logger.log("Compute cost", 3)
             result.objective_function(self.system)
             self.counter_obj_evaluation += 1
-
-        self.logger.level -= 1
 
         return result, current_cost_list, best_cost_list, time_list
 
@@ -95,8 +98,12 @@ class Local_Search(BaseHeuristics, TabuSearch):
     #   @param initial_state The initial solution obtained by RG as the starting point of LS
     #   @param max_score Maximum score that the algorithm will stop when it has been reached
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, max_time, max_steps, initial_state,
-                 min_score=None, log=Logger(), **kwargs):
+    def __init__(
+            self, system, max_time, max_steps, 
+            initial_state, min_score=None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-Local_Search"), 
+            **kwargs
+        ):
         BaseHeuristics.__init__(self, system, "LocalSearch", log)
         tabu_size = 1
         TabuSearch.__init__(self, initial_state, tabu_size, max_steps, max_time, min_score)
@@ -127,7 +134,6 @@ class Local_Search(BaseHeuristics, TabuSearch):
     #           4) The list of time corresponding to each step
     def run_algorithm(self, **kwargs):
 
-        self.logger.level += 1
         self.logger.log("Run Local Search", 3)
         best_solution, best_cost, current_cost_list, best_cost_list, time_list = self.run(self.verbose, self.method)
         # initialize results
@@ -145,7 +151,6 @@ class Local_Search(BaseHeuristics, TabuSearch):
             self.counter_obj_evaluation += 1
         else:
             new_result = copy.deepcopy(result)
-        self.logger.level -= 1
 
         return result, current_cost_list, best_cost_list, time_list
 
@@ -165,8 +170,12 @@ class Simulated_Annealing(BaseHeuristics, SimulatedAnnealing):
     #   @param schedule 'exponential' or 'linear' annealing schedule
     #   @param min_energy Minimum energy that the algorithm will stop when it has been reached
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, max_time, max_steps, initial_state,
-                 temp_begin, schedule_constant, schedule, min_energy=None, log=Logger(), **kwargs):
+    def __init__(
+            self, system, max_time, max_steps, initial_state,
+            temp_begin, schedule_constant, schedule, min_energy=None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-Simulated_Annealing"), 
+            **kwargs
+        ):
         BaseHeuristics.__init__(self, system, "SimulatedAnnealing", log)
         SimulatedAnnealing.__init__(self, initial_state, temp_begin, schedule_constant,
                                     max_steps, max_time, min_energy, schedule)
@@ -201,7 +210,6 @@ class Simulated_Annealing(BaseHeuristics, SimulatedAnnealing):
     #           3) The list of best costs obtained so far (up to each current step)
     #           4) The list of time corresponding to each step
     def run_algorithm(self, **kwargs):
-        self.logger.level += 1
         self.logger.log("Run Simulated Annealing", 3)
         best_solution, best_cost, current_cost_list, best_cost_list, time_list  = self.run(self.verbose)
         # initialize results
@@ -219,7 +227,6 @@ class Simulated_Annealing(BaseHeuristics, SimulatedAnnealing):
             self.counter_obj_evaluation += 1
         else:
             new_result = copy.deepcopy(result)
-        self.logger.level -= 1
 
         return result, current_cost_list, best_cost_list, time_list
 
@@ -241,8 +248,12 @@ class Genetic_Algorithm(BaseHeuristics, GeneticAlgorithm):
     #   @param mutation_rate The mutation rate
     #   @param min_fitness Minimum fitness that the algorithm will stop when it has been reached
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, max_time, max_steps, initial_state,
-                 crossover_rate, mutation_rate, min_fitness=None, log=Logger(), **kwargs):
+    def __init__(
+            self, system, max_time, max_steps, initial_state,
+            crossover_rate, mutation_rate, min_fitness=None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-Genetic_Algorithm"), 
+            **kwargs
+        ):
         BaseHeuristics.__init__(self, system, "Genetic_Algorithm", log)
         GeneticAlgorithm.__init__(self, crossover_rate, mutation_rate,
                                   max_steps, max_time, min_fitness)
@@ -366,7 +377,6 @@ class Genetic_Algorithm(BaseHeuristics, GeneticAlgorithm):
     #           3) The list of time corresponding to each step
     def run_algorithm(self, **kwargs):
 
-        self.logger.level += 1
         self.logger.log("Run Genetic Algorithm", 3)
         best_member, best_fitness, population, best_sol_cost_list, time_list  = self.run(self.verbose)
         # initialize results
@@ -384,6 +394,5 @@ class Genetic_Algorithm(BaseHeuristics, GeneticAlgorithm):
             self.counter_obj_evaluation += 1
         else:
             new_result = copy.deepcopy(result)
-        self.logger.level -= 1
 
         return result, best_sol_cost_list, time_list

@@ -1,4 +1,5 @@
-from classes.Logger import Logger
+from external import space4ai_logger
+
 from classes.PerformanceEvaluators import SystemPerformanceEvaluator, ServerFarmPE, EdgePE
 import numpy as np
 import itertools
@@ -35,7 +36,10 @@ class Configuration:
     #                Resources.Resource assigned to each 
     #                Graph.Component.Partition
     #   @param log Object of Logger type
-    def __init__(self, Y_hat, log=Logger()):
+    def __init__(
+            self, Y_hat, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-Configuration")
+        ):
         self.Y_hat = Y_hat
         self.local_slack_value = np.full(len(self.Y_hat), np.inf, 
                                          dtype = float)
@@ -278,9 +282,6 @@ class Configuration:
     #   @param S A System.System object
     def check_feasibility(self, S):
 
-        # increase indentation level for logging
-        self.logger.level += 1
-
         # define status of components and paths response times and constraints
         I = len(S.components)
         components_performance = [[True, np.infty]] * I
@@ -317,11 +318,7 @@ class Configuration:
                             feasible = feasible and paths_performance[-1][0]
 
         if not feasible:
-            self.logger.level += 1
             self.logger.log("Unfeasible", 4)
-            self.logger.level -= 1
-        
-        self.logger.level -= 1
         
         return feasible, paths_performance, components_performance
 
@@ -333,14 +330,10 @@ class Configuration:
     def all_response_times(self, S):
         Performances=[]
        
-        # increase indentation level for logging
-        self.logger.level += 1
         for component_idx in range(len(self.Y_hat)):
             j=np.nonzero(self.Y_hat[component_idx])
             # loop over all partitions
-            self.logger.level += 1
             self.logger.log("Evaluating partition response times", 6)
-            self.logger.level += 1
             for h in range(len(j[0])):
                 r_idx=j[1][h]
                 p_idx=j[0][h]
@@ -482,9 +475,7 @@ class Configuration:
         # compute response times of all components
        
         if not response_times:
-            PE = SystemPerformanceEvaluator(Logger(self.logger.stream,
-                                             self.logger.verbose,
-                                             self.logger.level + 1))
+            PE = SystemPerformanceEvaluator(self.logger)
             response_times = PE.compute_performance(S, self.Y_hat)
         
         solution_string = '{"Lambda": ' + str(S.Lambda)
@@ -613,9 +604,7 @@ class Configuration:
                  cost = None):
 
         if not response_times:
-            PE = SystemPerformanceEvaluator(Logger(self.logger.stream,
-                                             self.logger.verbose,
-                                             self.logger.level + 1))
+            PE = SystemPerformanceEvaluator(self.logger)
             response_times = PE.compute_performance(S, self.Y_hat)
         
         solution_string = '{"Lambda": ' + str(S.Lambda)
@@ -804,7 +793,7 @@ class Result:
     
     ## Result class constructor
     #   @param self The object pointer
-    def __init__(self, log=Logger()):
+    def __init__(self, log=space4ai_logger.Logger(name="SPACE4AI-D-Result")):
         self.ID = datetime.now().strftime("%Y%m%d-%H%M%S_") + str(uuid4())
         self.solution = None
         self.cost = np.infty
@@ -845,8 +834,6 @@ class Result:
     #   @param result The current Solution.Result object
     #   @return The updated Solution.Result object
     def reduce_cluster_size(self, resource_idx, system):
-
-        self.logger.level += 1
 
         # check if the resource index corresponds to an edge/cloud resource
         if resource_idx < system.FaaS_start_index:
@@ -889,8 +876,6 @@ class Result:
                         self.performance = new_performance
                         y_bar = self.solution.get_y_bar()
                         self.logger.log("feasible", 7)
-
-        self.logger.level -= 1
 
     ## Method to check the feasibility of the current Configuration
     #   @param self The object pointer
@@ -957,7 +942,10 @@ class EliteResults:
     #   @param self The object pointer
     #   @param K Maximum length of the elite results list
     #   @param log Object of Logger type
-    def __init__(self, K, log=Logger()):
+    def __init__(
+            self, K, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-EliteResults")
+        ):
         self.K = K
         self.elite_results = SortedList(key= attrgetter('cost','violation_rate'))#SortedList(key=lambda result: (result.cost, result.violation_rate))
         self.logger = log

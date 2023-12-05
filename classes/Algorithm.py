@@ -1,5 +1,6 @@
+from external import space4ai_logger
+
 from abc import ABC, abstractmethod
-from classes.Logger import Logger
 from classes.Solution import Configuration, Result, EliteResults
 import numpy as np
 import copy
@@ -50,7 +51,10 @@ class RandomGreedy(BaseAlgorithm):
     #   @param max_steps Maximum iterations needed to run the algorithm
     #   @param k_best The number of top best solutions that the algorithm must returns
     #   @param log Object of Logger.Logger type
-    def __init__(self, system, seed, max_time=1, max_steps=1, k_best=1, log=Logger()):
+    def __init__(
+            self, system, seed, max_time=1, max_steps=1, k_best=1, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-RandomGreedy")
+        ):
         super().__init__("RandomGreedy")
         self.system = system
         self.seed = seed
@@ -58,7 +62,6 @@ class RandomGreedy(BaseAlgorithm):
         self.max_iterations = max_steps
         self.k_best = k_best
         self.logger = log
-        self.error = Logger(stream=sys.stderr, verbose=1, error=True)
         np.random.seed(seed)
 
 
@@ -75,9 +78,6 @@ class RandomGreedy(BaseAlgorithm):
     #           (4) List of indices of the resource randomly selected in each
     #           computational layer
     def create_random_initial_solution(self):
-
-        # increase indentation level for logging
-        self.logger.level += 1
 
         # initialize the assignments
         self.logger.log("Initialize matrices", 4)
@@ -178,8 +178,6 @@ class RandomGreedy(BaseAlgorithm):
                     if y[i][h][j] > 0:
                         y_hat[i][h][j] = y[i][h][j] * number
 
-        self.logger.level -= 1
-
         return y_hat, res_parts_random, VM_numbers, CL_res_random
 
     ## Method to create the initial random solution smartly
@@ -195,9 +193,6 @@ class RandomGreedy(BaseAlgorithm):
     #           (4) List of indices of the resource randomly selected in each
     #           computational layer
     def create_random_initial_solution_smart(self):
-
-        # increase indentation level for logging
-        self.logger.level += 1
 
         # initialize the assignments
         self.logger.log("Initialize matrices", 4)
@@ -321,8 +316,6 @@ class RandomGreedy(BaseAlgorithm):
                     if y[i][h][j] > 0:
                         y_hat[i][h][j] = y[i][h][j] * number
 
-        self.logger.level -= 1
-
         return y_hat, res_parts_random, VM_numbers, CL_res_random
 
     ## Single step of the randomized greedy algorithm: it randomly generates
@@ -334,15 +327,12 @@ class RandomGreedy(BaseAlgorithm):
     #           storing all the random parameters
     def step(self):
 
-        # increase indentation level for logging
-        self.logger.level += 1
         self.logger.log("Randomized Greedy step", 3)
 
         # initialize results
         result = Result(self.logger)
 
         # generate random solution and check its feasibility
-        self.logger.level += 1
         self.logger.log("Generate random solution", 3)
         y_hat, res_parts_random, VM_numbers_random, CL_res_random = self.create_random_initial_solution()
         if y_hat == None:
@@ -378,7 +368,6 @@ class RandomGreedy(BaseAlgorithm):
             else:
                 self.logger.log("The solution is not feasible.")
                 new_result = copy.deepcopy(result)
-            self.logger.level -= 2
 
         return result, new_result, (res_parts_random, VM_numbers_random, CL_res_random)
 
@@ -392,8 +381,7 @@ class RandomGreedy(BaseAlgorithm):
 
         # initialize the elite set, the best result without cluster update
         # and the lists of random parameters
-        elite = EliteResults(self.k_best, Logger(self.logger.stream,
-                             self.logger.verbose, self.logger.level + 1))
+        elite = EliteResults(self.k_best, self.logger)
         best_result_no_update = Result(self.logger)
         # add initial unfeasible sol with inf cost and violation ratio
         elite.elite_results.add(best_result_no_update)
@@ -403,7 +391,6 @@ class RandomGreedy(BaseAlgorithm):
 
         # perform randomized greedy iterations
         self.logger.log("Starting Randomized Greedy procedure", 1)
-        self.logger.level += 1
         feasible_sol_found = False
         iteration = 0
         start = time.time()
@@ -420,8 +407,7 @@ class RandomGreedy(BaseAlgorithm):
             else:
                 if not feasible_sol_found:
                     feasible_sol_found = True
-                    elite = EliteResults(self.k_best, Logger(self.logger.stream,
-                                         self.logger.verbose, self.logger.level + 1))
+                    elite = EliteResults(self.k_best, self.logger)
                     best_result_no_update = Result(self.logger)
                     elite.elite_results.add(best_result_no_update)
             # update the results and the lists of random parameters
@@ -433,7 +419,6 @@ class RandomGreedy(BaseAlgorithm):
             # VM_numbers_random_list.append(random_param[1])
             # CL_res_random_list.append(random_param[2])
             iteration += 1
-        self.logger.level -= 1
 
         random_params = [res_parts_random_list, VM_numbers_random_list,
                          CL_res_random_list]

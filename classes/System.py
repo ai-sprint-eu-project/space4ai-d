@@ -1,6 +1,7 @@
+from external import space4ai_logger
+
 import pdb
 
-from classes.Logger import Logger
 from classes.Graph import DAG, Component
 from classes.Resources import ComputationalLayer, VirtualMachine, EdgeNode, FaaS
 from classes.NetworkTechnology import NetworkDomain
@@ -128,9 +129,11 @@ class System:
     #   @param system_file Configuration file describing the system
     #   @param system_json Json object describing the system
     #   @param log Object of Logger.Logger type
-    def __init__(self, system_file="", system_json=None, Lambda=None, log=Logger()):
+    def __init__(
+            self, system_file="", system_json=None, Lambda=None, 
+            log=space4ai_logger.Logger(name="SPACE4AI-D-System")
+        ):
         self.logger = log
-        self.error = Logger(stream=sys.stderr, verbose=1, error=True)
         self.Lambda = Lambda
         if system_file != "":
             self.logger.log("Loading system from configuration file", 1)
@@ -139,7 +142,7 @@ class System:
             self.logger.log("Loading system from json object", 1)
             self.load_json(system_json)
         else:
-            self.error.log("No configuration file or json specified")
+            self.logger.err("No configuration file or json specified")
             sys.exit(1)
     
     
@@ -163,19 +166,14 @@ class System:
     #   @param data Json object describing the system 
     def load_json(self, data):
         
-        # increase indentation level for logging
-        self.logger.level += 1
         #pdb.set_trace()
         # initialize system DAG
         if "DirectedAcyclicGraph" in data.keys():
             self.logger.log("Initializing DAG", 2)
             DAG_dict = data["DirectedAcyclicGraph"]
-            self.graph = DAG(graph_dict=DAG_dict,
-                             log=Logger(stream=self.logger.stream,
-                                        verbose=self.logger.verbose,
-                                        level=self.logger.level+1))
+            self.graph = DAG(graph_dict=DAG_dict,log=self.logger)
         else:
-            self.error.log("No DAG available in configuration file")
+            self.logger.err("No DAG available in configuration file")
             sys.exit(1)
         
         # initialize lambda
@@ -184,7 +182,7 @@ class System:
                 self.logger.log("Initializing Lambda", 2)
                 self.Lambda = float(data["Lambda"])
             else:
-                self.error.log("No Lambda available in configuration file")
+                self.logger.err("No Lambda available in configuration file")
                 sys.exit(1)
                
         # initialize components and local constraints
@@ -202,7 +200,7 @@ class System:
             # perform initialization
             self.initialize_components(C, LC)
         else:
-            self.error.log("No components available in configuration file")
+            self.logger.err("No components available in configuration file")
             sys.exit(1)
         
         # get global constraints to initialize the maximun response time of 
@@ -238,10 +236,10 @@ class System:
                                           NetworkPerformanceEvaluator())
                     self.network_technologies.append(network_domain)
                 else:
-                    self.error.log("Missing field in {} description".format(ND))
+                    self.logger.err("Missing field in {} description".format(ND))
                     sys.exit(1)
         else:
-            self.error.log("No NetworkTechnology available in configuration file", 1)
+            self.logger.err("No NetworkTechnology available in configuration file", 1)
             sys.exit(1)
        
         # load dictionary of component-to-node compatibility 
@@ -249,7 +247,7 @@ class System:
         if "CompatibilityMatrix" in data.keys():
             self.compatibility_dict = data["CompatibilityMatrix"]
         else:
-            self.error.log("No CompatibilityMatrix available in configuration file")
+            self.logger.err("No CompatibilityMatrix available in configuration file")
             sys.exit(1)
         
         # variable to check, for each component, if all resources mentioned 
@@ -267,11 +265,11 @@ class System:
                         compatible_res_list=[res["resource"] for res in self.compatibility_dict[c][p]]
                         if not r in compatible_res_list:
                             is_compatible = False
-                            self.error.log("Performance dictionary and compatibility matrix are not consistent")
+                            self.logger.err("Performance dictionary and compatibility matrix are not consistent")
                             sys.exit(1)
         else:
             is_compatible = False
-            self.error.log("No Performance dictionary available in configuration file")
+            self.logger.err("No Performance dictionary available in configuration file")
             sys.exit(1)
        
         # if performance dictionary is available and it is consistent with 
@@ -286,9 +284,6 @@ class System:
         self.logger.log("Initializing time", 2)
         if "Time" in data.keys():
             self.T = float(data["Time"])
-        
-        # restore indentation level for logging
-        self.logger.level -= 1
        
  
     ## Method to initialize the components based on the dictionary of 
@@ -308,14 +303,14 @@ class System:
         # loop over components
         first_node = [node for node, in_degree in self.graph.G.in_degree if in_degree == 0]
         if len(first_node) > 1:
-            self.error.log("The application graph must not have more than one start node")
+            self.logger.err("The application graph must not have more than one start node")
             sys.exit(1)
         elif len(first_node) == 0:
-            self.error.log("The application graph must have one start node")
+            self.logger.err("The application graph must have one start node")
             sys.exit(1)
 
         if set(self.graph.G.nodes) != set(C.keys()):
-            self.error.log("No match between components in DAG and system input file")
+            self.logger.err("No match between components in DAG and system input file")
             sys.exit(1)
         # Define a queue of component to visit the nodes of application DAG
         q = OrderedSetQueue(maxsize=len(self.graph.G.nodes))
@@ -422,9 +417,6 @@ class System:
     #   @param data Json object storing all the relevant information
     def initialize_resources(self, data):
         
-        # increase indentation level for logging
-        self.logger.level += 1
-        
         self.resources = []
         self.description = {}
         self.dic_map_res_idx = {}
@@ -453,7 +445,7 @@ class System:
                         cl.add_resource(resource_idx)
                         resource_idx += 1
                     else:
-                        self.error.log("Missing field in {} description".\
+                        self.logger.err("Missing field in {} description".\
                                        format(node))
                         sys.exit(1)
                     # add the resource description to the corresponding 
@@ -488,7 +480,7 @@ class System:
                         cl.add_resource(resource_idx)
                         resource_idx += 1
                     else:
-                        self.error.log("Missing field in {} description".\
+                        self.logger.err("Missing field in {} description".\
                                        format(VM))
                         sys.exit(1)
                     # add the resource description to the corresponding 
@@ -513,7 +505,7 @@ class System:
                     if "transition_cost" in FR[CL].keys():
                         transition_cost = float(FR[CL]["transition_cost"])
                     else:
-                        self.error.log("Missing transition cost in {}".\
+                        self.logger.err("Missing transition cost in {}".\
                                        format(CL))
                         sys.exit(1)
                     # loop over functions and add them to the corresponding 
@@ -544,9 +536,6 @@ class System:
                     # add the new computational layer
                     self.CLs.append(cl)
 
-        # restore indentation level for logging
-        self.logger.level -= 1
-
     ## Method to convert the dictionary of global constraints to a list
     # @param self The object pointer   
     # @param GC Dictionary of global constraints
@@ -560,7 +549,7 @@ class System:
                 if c in self.dic_map_com_idx.keys():
                     C_list.append(list(self.dic_map_com_idx.keys()).index(c))
                 else:
-                    self.error.log("No match between components and path in global constraints")
+                    self.logger.err("No match between components and path in global constraints")
                     sys.exit(1)
             self.global_constraints.append(GlobalConstraint(C_list, 
                                                             GC[p]["global_res_time"],
@@ -613,7 +602,7 @@ class System:
                         m = Pfactory.create(perf_data["model"], **model_data)
                         self.performance_models[comp_idx][part_idx][res_idx] = m
                     else:
-                        self.error.log("Missing performance model/evaluator")
+                        self.logger.err("Missing performance model/evaluator")
                         sys.exit(1)
                     # get the demand (if available)
                     d = np.nan
