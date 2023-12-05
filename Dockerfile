@@ -12,8 +12,10 @@ WORKDIR /home/SPACE4AI-D
 
 COPY ./Run_and_Evaluate_integrate_AISPRINT.py .
 COPY ./classes ./classes
-COPY ./Solid ./Solid
 COPY ./requirements.txt .
+
+# copy existing external modules
+COPY ./external ./external
 
 # Install requirements for the SPACE4AI-D program
 RUN pip install -r ./requirements.txt
