@@ -1,8 +1,7 @@
+from external import space4ai_logger, space4ai_parser
+
 import pdb
-from classes.Logger import Logger
 from classes.System import System
-from space4ai_parser.YamlGenerator import ParserJsonToYaml
-from space4ai_parser.JsonGenerator import ParserYamlToJson
 from classes.AlgorithmPool import AlgPool
 import sys
 import os
@@ -64,12 +63,12 @@ class MultiProcessing:
             remainder_StartingPoints = len(self.StartingPoints) % self.cpuCore
         next_idx = 0
         for r in range(self.cpuCore):
-            if logger.stream != sys.stdout:
+            if logger.out_stream != sys.stdout:
                 if self.cpuCore > 1 and logger.verbose > 0:
-                    log_file = ".".join(logger.stream.name.split(".")[:-1])
+                    log_file = ".".join(logger.out_stream.name.split(".")[:-1])
                     log_file += "_" + str(r) + ".log"
                 else:
-                    log_file = logger.stream.name
+                    log_file = logger.out_stream.name
             else:
                 log_file = ""
             r_seed = r * r * self.cpuCore * self.cpuCore * seed
@@ -101,16 +100,22 @@ class MultiProcessing:
         S = System(system_json=json_object, log=self.method["parameters"]["log"])
         method["parameters"]["system"] = S
         method["parameters"]["seed"] = core_params[2]
-        print("\n Seed: " + str(core_params[2]))
-        print("\n Iteration number: " + str(core_params[0]))
         core_logger = method["parameters"]["log"]
         if core_params[3] != "":
             log_file = open(core_params[3], "a")
-            core_logger.stream = log_file
+            core_logger.out_stream = log_file
             method["parameters"]["log"] = core_logger
+        core_logger.log("Seed: " + str(core_params[2]))
+        core_logger.log("Iteration number: " + str(core_params[0]))
         if self.StartingPoints:
-            elite_sol = EliteResults(1, Logger(self.logger.stream,
-                                               self.logger.verbose, self.logger.level + 1))
+            elite_sol = EliteResults(
+                1, 
+                space4ai_logger.Logger(
+                    name="SPACE4AI-D",
+                    out_stream=self.logger.out_stream,
+                    verbose=self.logger.verbose
+                )
+            )
             elite_sol.elite_results.add(Result())
             if self.method["name"] in list(
                     i for i in AlgPool.algorithms if AlgPool.algorithms[i] == AlgPool.algorithms["GA"]):
@@ -262,8 +267,14 @@ def generate_output_json(Lambda, result, S, onFile = True):
 
 
 def main(application_dir):
-    error = Logger(stream=sys.stderr, verbose=1, error=True)
-    parser_json_generator = ParserYamlToJson(application_dir, "s4aid")
+    logger = space4ai_logger.Logger(name="SPACE4AI-D")
+    parser_json_generator = space4ai_parser.ParserYamlToJson(
+        application_dir, "s4aid", log = space4ai_logger.Logger(
+            name="S4AIParser",
+            out_stream=logger.out_stream,
+            verbose=logger.verbose
+        )
+    )
     input_json_dir = parser_json_generator.make_input_json()
     system_file = parser_json_generator.make_system_file()
     dep_list = []
@@ -276,9 +287,9 @@ def main(application_dir):
     #input_json = json.loads(input_json)
     RG_method = {}
     if "VerboseLevel" in input_json.keys():
-        logger = Logger(stream=sys.stderr, verbose=input_json["VerboseLevel"])
+        logger.verbose = input_json["VerboseLevel"]
     else:
-        error.log("{} does not exist.".format("VerboseLevel"))
+        logger.err("{} does not exist.".format("VerboseLevel"))
         sys.exit(1)
     if "Methods" in input_json.keys():
         Methods = input_json["Methods"]
@@ -295,18 +306,18 @@ def main(application_dir):
             if "duration" in RG:
                 RG_method["parameters"]["max_time"] = RG["duration"]
             if "iterations" not in RG and "duration" not in RG:
-                error.log("At least one of duration or iterations should be specified for RG ")
+                logger.err("At least one of duration or iterations should be specified for RG ")
                 sys.exit(1)
             if "Seed" in input_json.keys():
                 RG_method["parameters"]["seed"] = input_json["Seed"]
             else:
-                error.log("{} does not exist".format("Seed"))
+                logger.err("{} does not exist".format("Seed"))
                 sys.exit(1)
         else:
-            error.log("Random Greedy is a mandatory method and the name can be one of this list: {}.".format(RG_list))
+            logger.err("Random Greedy is a mandatory method and the name can be one of this list: {}.".format(RG_list))
             sys.exit(1)
     else:
-        error.log("{} does not exist".format("Methods"))
+        logger.err("{} does not exist".format("Methods"))
         sys.exit(1)
     startingPointNumber = 1
 
@@ -320,15 +331,15 @@ def main(application_dir):
         if "upperBoundLambda" in BS:
             upper_bound_lambda = BS["upperBoundLambda"]
         else:
-            error.log("upperBoundLambda is mandatory parameter for BS")
+            logger.err("upperBoundLambda is mandatory parameter for BS")
             sys.exit(1)
         if "epsilon" in BS:
             epsilon = BS["epsilon"]
         else:
-            error.log("epsilon is mandatory parameter for BS")
+            logger.err("epsilon is mandatory parameter for BS")
             sys.exit(1)
     else:
-        error.log("Binary Search is a mandatory method and the name can be one of this list: {}.".format(BS_list))
+        logger.err("Binary Search is a mandatory method and the name can be one of this list: {}.".format(BS_list))
         sys.exit(1)
 
     Heu_method = {}
@@ -345,27 +356,27 @@ def main(application_dir):
             if Heu["name"] in heu_list:
                 Heu_method["name"] = Heu["name"]
             else:
-                error.log("Heuristic name should be  one of this list: {}.".format(heu_list))
+                logger.err("Heuristic name should be  one of this list: {}.".format(heu_list))
                 sys.exit(1)
             if "iterations" in Heu:
                 Heu_method["parameters"]["max_steps"] = Heu["iterations"]
             if "duration" in Heu:
                 Heu_method["parameters"]["max_time"] = Heu["duration"]
             if "iterations" not in Heu and "duration" not in Heu:
-                error.log("At least one of duration or iterations should be specified for heuristic.")
+                logger.err("At least one of duration or iterations should be specified for heuristic.")
                 sys.exit(1)
             Heu_method["parameters"]["seed"] = RG_method["parameters"]["seed"]
             if "startingPointNumber" in Heu:
                 startingPointNumber = Heu["startingPointNumber"]
             else:
-                error.log(" startingPointNumber should be specified")
+                logger.err(" startingPointNumber should be specified")
                 sys.exit(1)
 #################### Special parameters #######################################
         ############ LS parameters #####################
             if Heu_method["name"] in list(i for i in AlgPool.algorithms if AlgPool.algorithms[i] == AlgPool.algorithms["LS"]):
                 if "specialParameters" in Heu:
                     if "minScore" not in Heu["specialParameters"]:
-                        print("minScore is optional fild for Local Search. The default value is None.")
+                        logger.warn("minScore is optional fild for Local Search. The default value is None.")
                     else:
                         Heu_method["parameters"]["max_score"] = Heu["specialParameters"]["minScore"]
 
@@ -375,10 +386,10 @@ def main(application_dir):
                 if "tabuSize" in Heu["specialParameters"]:
                     Heu_method["parameters"]["tabu_size"] = Heu["specialParameters"]["tabuSize"]
                 else:
-                    error.log(" tabuSize should be specified")
+                    logger.err(" tabuSize should be specified")
                     sys.exit(1)
                 if "minScore" not in Heu["specialParameters"]:
-                    print("minScore is optional fild for Tabu Search. The default value is None.")
+                    logger.warn("minScore is optional fild for Tabu Search. The default value is None.")
                 else:
                     Heu_method["parameters"]["max_score"] = Heu["specialParameters"]["minScore"]
             ############## SA parameters #####################
@@ -387,36 +398,36 @@ def main(application_dir):
                 if "tempBegin" in Heu["specialParameters"]:
                     Heu_method["parameters"]["temp_begin"] = Heu["specialParameters"]["tempBegin"]
                 else:
-                    error.log(" tempBegin, which is the initial temperature, should be specified")
+                    logger.err(" tempBegin, which is the initial temperature, should be specified")
                     sys.exit(1)
                 if "scheduleConstant" in Heu["specialParameters"]:
                     Heu_method["parameters"]["schedule_constant"] = Heu["specialParameters"]["scheduleConstant"]
                 else:
-                    error.log(" scheduleConstant, which is the annealing constant to reduce the temperature, should be specified")
+                    logger.err(" scheduleConstant, which is the annealing constant to reduce the temperature, should be specified")
                     sys.exit(1)
                 if "minEnergy" not in Heu["specialParameters"]:
-                    print("minEnergy is optional fild for Local Search. The initial value is None.")
+                    logger.warn("minEnergy is optional fild for Local Search. The initial value is None.")
                 else:
                     Heu_method["parameters"]["min_energy"] = Heu["specialParameters"]["minEnergy"]
                 if "schedule" in Heu["specialParameters"]:
                     Heu_method["parameters"]["schedule"] = Heu["specialParameters"]["schedule"]
                 else:
-                    error.log("schedule, which specifies the annealing schedule method, should be specified. it can be 'exponential' or 'linear'")
+                    logger.err("schedule, which specifies the annealing schedule method, should be specified. it can be 'exponential' or 'linear'")
                     sys.exit(1)
             ############## GA parameters #####################
             else:
                 if "crossoverRate" in Heu["specialParameters"]:
                     Heu_method["parameters"]["crossover_rate"] = Heu["specialParameters"]["crossoverRate"]
                 else:
-                    error.log("crossoverRate is a mandatory parameter for GA and it should be specified")
+                    logger.err("crossoverRate is a mandatory parameter for GA and it should be specified")
                     sys.exit(1)
                 if "mutationRate" in Heu["specialParameters"]:
                     Heu_method["parameters"]["mutation_rate"] = Heu["specialParameters"]["mutationRate"]
                 else:
-                    error.log(" mutationRate is a mandatory parameter for GA and it should be specified")
+                    logger.err(" mutationRate is a mandatory parameter for GA and it should be specified")
                     sys.exit(1)
                 if "minFitness" not in Heu["specialParameters"]:
-                    print("minFitness is optional fild for Local Search. The initial value is None.")
+                    logger.warn("minFitness is optional fild for Local Search. The initial value is None.")
                 else:
                     Heu_method["parameters"]["min_fitness"] = Heu["specialParameters"]["minFitness"]
             Heu_method["parameters"]["log"] = logger
@@ -424,7 +435,7 @@ def main(application_dir):
     RG_method["parameters"]["log"] = logger
 
 
-    print("\nStart parsing YAML files... ")
+    logger.log("Start parsing YAML files... ")
     #parser_s4aid = ParserJsonToYaml(application_dir,"s4air","space4ai-r/deployment1")
     #parser_s4aid.main_function()
 
@@ -436,7 +447,7 @@ def main(application_dir):
     feasible_found, solutions, result = MP.run(system_file)
     #feasibility, starting_points, result, S = Random_Greedy_run(json_object, method1)
     if not feasible_found:
-        error.log("No feasible solution is found by RG")
+        logger.err("No feasible solution is found by RG")
     else:
         if Heu_method != {}:
             Heu_method["parameters"]["starting_point"] = solutions
@@ -444,12 +455,18 @@ def main(application_dir):
             feasible_found, solutions, result = MP.run(system_file)
     output_json=application_dir+"/space4ai-d/Output.json"
     if result.solution is None:
-        print("No solution is found.")
+        logger.log("No solution is found.")
     else:
         Y_hat = result.solution.Y_hat
         S = System(system_json=json_object, log=logger)
         result.print_result(S, output_json)
-        parser_yaml_generator = ParserJsonToYaml(application_dir, "s4aid")
+        parser_yaml_generator = space4ai_parser.ParserJsonToYaml(
+            application_dir, "s4aid", log = space4ai_logger.Logger(
+                name="S4AIParser",
+                out_stream=logger.out_stream,
+                verbose=logger.verbose
+            )
+        )
         parser_yaml_generator.main_function()
         ################### find highest Lambda #######################
         BS_method["parameters"] = {}
@@ -461,7 +478,15 @@ def main(application_dir):
             dep_list = ["original_deployment"]
         for dep_name in dep_list:
 
-            parser_json_alt_generator = ParserYamlToJson(application_dir, "s4aid", alternative_deployment=dep_name)
+            parser_json_alt_generator = space4ai_parser.ParserYamlToJson(
+                application_dir, "s4aid", 
+                alternative_deployment=dep_name,
+                log=space4ai_logger.Logger(
+                    name="S4AIParser",
+                    out_stream=logger.out_stream,
+                    verbose=logger.verbose
+                )
+            )
             system_file = parser_json_alt_generator.make_system_file()
             BS_method["parameters"]["system"] = System(system_file=system_file)
             BS_method["parameters"]["system_file"] = system_file
@@ -482,11 +507,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # initialize error stream
-    error = Logger(stream=sys.stderr, verbose=1, error=True)
     dic = {}
     # check if the system configuration file exists
     if not os.path.exists(args.application_dir):
-        error.log("{} does not exist".format(args.application_dir))
+        print("{} does not exist".format(args.application_dir))
         sys.exit(1)
     else:
         application_dir = args.application_dir
