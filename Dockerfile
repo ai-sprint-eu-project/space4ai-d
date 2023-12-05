@@ -18,17 +18,25 @@ COPY ./requirements.txt .
 # Install requirements for the SPACE4AI-D program
 RUN pip install -r ./requirements.txt
 
-# define parser and aMLlibrary url
+# define parser, logger and aMLlibrary url
 ENV GITLAB=https://gitlab.polimi.it
-ENV PARSER_URL=${GITLAB}/ai-sprint/ai-sprint-parser.git
-ENV PROJECT_ID=776
+ENV PARSER_URL=${GITLAB}/ai-sprint/space4ai-parser.git
+ENV LOGGER_URL=${GITLAB}/ai-sprint/space4ai-logger.git
 ENV aMLLibrary_URL=${GITLAB}/ai-sprint/a-mllibrary.git
+ENV PROJECT_ID=776
+ENV PARSER_DIR=external/space4ai_parser
+ENV LOGGER_DIR=external/space4ai_logger
+ENV aMLLibrary_DIR=aMLLibrary
 
 # install aMLLibrary
-RUN git clone --recurse-submodules ${aMLLibrary_URL} ./aMLLibrary
-RUN pip install -r ./aMLLibrary/requirements.txt
+RUN git clone --recurse-submodules ${aMLLibrary_URL} ./${aMLLibrary_DIR}
+RUN pip install -r ./${aMLLibrary_DIR}/requirements.txt
+
+# install logger
+RUN git clone ${LOGGER_URL} ./${LOGGER_DIR}
+
 ############################################################################
-#			build image for development                        #
+#			build image for development
 ############################################################################
 FROM base as image-dev
 
@@ -38,15 +46,14 @@ ADD "${GITLAB}/api/v4/projects/${PROJECT_ID}/repository/branches/main" \
 	/tmp/devalidateCache
 
 # install parser (latest version)
-RUN git clone ${PARSER_URL} ./ai_sprint_parser
-RUN pip install --no-cache-dir -r ./ai_sprint_parser/requirements.txt
-ENV PYTHONPATH="${PYTHONPATH}:/home/SPACE4AI-D/ai_sprint_parser"
+RUN git clone ${PARSER_URL} ./${PARSER_DIR}
+RUN pip install --no-cache-dir -r ./${PARSER_DIR}/requirements.txt
 
 # entrypoint
 CMD bash
 
 ############################################################################
-#			build image for production                         #
+#			build image for production
 ############################################################################
 FROM base as image-prod
 
@@ -57,9 +64,8 @@ ARG PARSER_TAG=23.06.30
 RUN git clone	--depth 1 \
 		--branch ${PARSER_TAG} \
 		${PARSER_URL} \
-		./ai_sprint_parser
-RUN pip install --no-cache-dir -r ai_sprint_parser/requirements.txt
-ENV PYTHONPATH="${PYTHONPATH}:/home/SPACE4AI-D/ai_sprint_parser"
+		./${PARSER_DIR}
+RUN pip install --no-cache-dir -r ./${PARSER_DIR}/requirements.txt
 
 # entrypoint
 CMD bash
