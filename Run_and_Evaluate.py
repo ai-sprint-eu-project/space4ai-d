@@ -1,8 +1,8 @@
+from external import space4ai_logger
+
 import pdb
-from classes.Logger import Logger
 from classes.System import System
 from classes.AlgorithmPool import AlgPool
-from classes.BaseHeuristics import BaseHeuristics
 import sys
 import os
 import json
@@ -65,12 +65,12 @@ class MultiProcessing:
             remainder_StartingPoints = len(self.StartingPoints) % self.cpuCore
         next_idx = 0
         for r in range(self.cpuCore):
-            if logger.stream != sys.stdout:
+            if logger.out_stream != sys.stdout:
                 if self.cpuCore > 1 and logger.verbose > 0:
-                    log_file = ".".join(logger.stream.name.split(".")[:-1])
+                    log_file = ".".join(logger.out_stream.name.split(".")[:-1])
                     log_file += "_" + str(r) + ".log"
                 else:
-                    log_file = logger.stream.name
+                    log_file = logger.out_stream.name
             else:
                 log_file = ""
             r_seed = r * r * self.cpuCore * self.cpuCore * seed
@@ -104,15 +104,21 @@ class MultiProcessing:
         core_logger = method["parameters"]["log"]
         if core_params[3] != "":
             log_file = open(core_params[3], "a")
-            core_logger.stream = log_file
+            core_logger.out_stream = log_file
             method["parameters"]["log"] = core_logger
-        core_logger.log("\n Seed: " + str(core_params[2]))
-        core_logger.log("\n Iteration number: " + str(core_params[0]))
+        core_logger.log("Seed: " + str(core_params[2]))
+        core_logger.log("Iteration number: " + str(core_params[0]))
         S = System(system_json=json_object, log=core_logger)
         method["parameters"]["system"] = S
         if self.StartingPoints:
-            elite_sol = EliteResults(1, Logger(core_logger.stream,
-                                               core_logger.verbose, core_logger.level + 1))
+            elite_sol = EliteResults(
+                1, 
+                space4ai_logger.Logger(
+                    name="SPACE4AI-D",
+                    out_stream=core_logger.out_stream,
+                    verbose=core_logger.verbose
+                )
+            )
             elite_sol.elite_results.add(Result(core_logger))
             if self.method["name"] in list(
                     i for i in AlgPool.algorithms if AlgPool.algorithms[i] == AlgPool.algorithms["GA"]):
@@ -262,8 +268,7 @@ def generate_output_json(system_file, Lambda, result, logger, onFile=True):
     result.print_result(S, solution_file=output_json)
 
 
-def main(dic, log_directory):
-    error = Logger(stream=sys.stderr, verbose=1, error=True)
+def main(dic, logger, log_directory):
     system_file = dic["system_file"]
     Lambda_list = []
 
@@ -282,17 +287,14 @@ def main(dic, log_directory):
         solution_file = dic["solution_file"]
         Lambda = dic["Lambda"]
         json_object["Lambda"] = Lambda
-        # initialize logger
-        verbose = dic["VerboseLevel"]
+        # set logger stream (if printing on file)
         if log_directory != "":
             log_file_lambda = "LOG_" + str(Lambda) + ".log"
             log_file_lambda = os.path.join(log_directory, log_file_lambda)
             log_file_lambda = open(log_file_lambda, "a")
-        else:
-            log_file_lambda = sys.stdout
-        logger = Logger(stream=log_file_lambda, verbose=verbose)
-        logger.log("\n" + str(Lambda))
-        logger.log("\n" + solution_file)
+            logger.out_stream = log_file_lambda
+        logger.log(f"Current Lambda is {Lambda} req/s")
+        logger.log(f"Solution will be printed on {solution_file}")
         # initialize system
         S = System(system_json=json_object, log=logger)
         # Create a fake LS to use create_solution_by_file function
@@ -316,14 +318,6 @@ def main(dic, log_directory):
             result.print_result(S, output_json)
     # run-algorithms scenario
     else:
-        # initialize general logger
-        verbose = dic["VerboseLevel"]
-        if log_directory != "":
-            general_log_file = os.path.join(log_directory, "LOG.log")
-            general_log_file = open(general_log_file, "a")
-        else:
-            general_log_file = sys.stdout
-        logger = Logger(stream=general_log_file, verbose=verbose)
         # load configuration
         config_file = dic["config_file"]
         with open(config_file, "r") as a_file:
@@ -341,14 +335,15 @@ def main(dic, log_directory):
             verbose = dic["VerboseLevel"]
             logger.log(f"Using verbosity level provided at command-line ({verbose})")
         else:
-            error.log("{} does not exist.".format("VerboseLevel"))
+            logger.err("{} does not exist.".format("VerboseLevel"))
             sys.exit(1)
         if "Lambda" in dic.keys():
             Lambda_list.append(dic["Lambda"])
 
         if len(Lambda_list) == 0:
-            error.log(
-                "No values provided for Lambda. Specify -L from the command-line or LambdaBound in the config file")
+            logger.err(
+                "No values provided for Lambda. Specify -L from the command-line or LambdaBound in the config file"
+            )
             sys.exit(1)
 
         if "Methods" in input_json.keys():
@@ -366,19 +361,20 @@ def main(dic, log_directory):
                 if "duration" in RG:
                     RG_method["parameters"]["max_time"] = RG["duration"]
                 if "iterations" not in RG and "duration" not in RG:
-                    error.log("At least one of duration or iterations should be specified for RG ")
+                    logger.err("At least one of duration or iterations should be specified for RG ")
                     sys.exit(1)
                 if "Seed" in input_json.keys():
                     RG_method["parameters"]["seed"] = input_json["Seed"]
                 else:
-                    error.log("{} does not exist".format("Seed"))
+                    logger.err("{} does not exist".format("Seed"))
                     sys.exit(1)
             else:
-                error.log(
-                    "Random Greedy is a mandatory method and the name can be one of this list: {}.".format(RG_list))
+                logger.err(
+                    "Random Greedy is a mandatory method and the name can be one of this list: {}.".format(RG_list)
+                )
                 sys.exit(1)
         else:
-            error.log("{} does not exist".format("Methods"))
+            logger.err("{} does not exist".format("Methods"))
             sys.exit(1)
         startingPointNumber = 1
 
@@ -396,20 +392,20 @@ def main(dic, log_directory):
                 if Heu["name"] in heu_list:
                     Heu_method["name"] = Heu["name"]
                 else:
-                    error.log("Heuristic name should be  one of this list: {}.".format(heu_list))
+                    logger.err("Heuristic name should be  one of this list: {}.".format(heu_list))
                     sys.exit(1)
                 if "iterations" in Heu:
                     Heu_method["parameters"]["max_steps"] = Heu["iterations"]
                 if "duration" in Heu:
                     Heu_method["parameters"]["max_time"] = Heu["duration"]
                 if "iterations" not in Heu and "duration" not in Heu:
-                    error.log("At least one of duration or iterations should be specified for heuristic.")
+                    logger.err("At least one of duration or iterations should be specified for heuristic.")
                     sys.exit(1)
                 Heu_method["parameters"]["seed"] = RG_method["parameters"]["seed"]
                 if "startingPointNumber" in Heu:
                     startingPointNumber = Heu["startingPointNumber"]
                 else:
-                    error.log(" startingPointNumber should be specified")
+                    logger.err(" startingPointNumber should be specified")
                     sys.exit(1)
                 #################### Special parameters #######################################
                 ############ LS parameters #####################
@@ -427,7 +423,7 @@ def main(dic, log_directory):
                     if "tabuSize" in Heu["specialParameters"]:
                         Heu_method["parameters"]["tabu_size"] = Heu["specialParameters"]["tabuSize"]
                     else:
-                        error.log(" tabuSize should be specified")
+                        logger.err(" tabuSize should be specified")
                         sys.exit(1)
                     if "minScore" not in Heu["specialParameters"]:
                         logger.log("minScore is optional fild for Tabu Search. The default value is None.")
@@ -439,13 +435,14 @@ def main(dic, log_directory):
                     if "tempBegin" in Heu["specialParameters"]:
                         Heu_method["parameters"]["temp_begin"] = Heu["specialParameters"]["tempBegin"]
                     else:
-                        error.log(" tempBegin, which is the initial temperature, should be specified")
+                        logger.err(" tempBegin, which is the initial temperature, should be specified")
                         sys.exit(1)
                     if "scheduleConstant" in Heu["specialParameters"]:
                         Heu_method["parameters"]["schedule_constant"] = Heu["specialParameters"]["scheduleConstant"]
                     else:
-                        error.log(
-                            " scheduleConstant, which is the annealing constant to reduce the temperature, should be specified")
+                        logger.err(
+                            " scheduleConstant, which is the annealing constant to reduce the temperature, should be specified"
+                        )
                         sys.exit(1)
                     if "minEnergy" not in Heu["specialParameters"]:
                         logger.log("minEnergy is optional fild for Local Search. The initial value is None.")
@@ -454,20 +451,21 @@ def main(dic, log_directory):
                     if "schedule" in Heu["specialParameters"]:
                         Heu_method["parameters"]["schedule"] = Heu["specialParameters"]["schedule"]
                     else:
-                        error.log(
-                            "schedule, which specifies the annealing schedule method, should be specified. it can be 'exponential' or 'linear'")
+                        logger.err(
+                            "schedule, which specifies the annealing schedule method, should be specified. it can be 'exponential' or 'linear'"
+                        )
                         sys.exit(1)
                 ############## GA parameters #####################
                 else:
                     if "crossoverRate" in Heu["specialParameters"]:
                         Heu_method["parameters"]["crossover_rate"] = Heu["specialParameters"]["crossoverRate"]
                     else:
-                        error.log("crossoverRate is a mandatory parameter for GA and it should be specified")
+                        logger.err("crossoverRate is a mandatory parameter for GA and it should be specified")
                         sys.exit(1)
                     if "mutationRate" in Heu["specialParameters"]:
                         Heu_method["parameters"]["mutation_rate"] = Heu["specialParameters"]["mutationRate"]
                     else:
-                        error.log(" mutationRate is a mandatory parameter for GA and it should be specified")
+                        logger.err(" mutationRate is a mandatory parameter for GA and it should be specified")
                         sys.exit(1)
                     if "minFitness" not in Heu["specialParameters"]:
                         logger.log("minFitness is optional fild for Local Search. The initial value is None.")
@@ -481,14 +479,19 @@ def main(dic, log_directory):
             system = json.dumps(data, indent=2)
             with open(system_file, "w") as f:
                 f.write(system)
-            # initialize logger for the current load
+            # set logger stream for the current load
             if log_directory != "":
                 log_file_lambda = "LOG_" + str(round(float(Lambda), 4)) + ".log"
                 log_file_lambda = os.path.join(log_directory, log_file_lambda)
                 log_file_lambda = open(log_file_lambda, "a")
             else:
                 log_file_lambda = sys.stdout
-            lambda_logger = Logger(stream=log_file_lambda, verbose=verbose)
+            lambda_logger = space4ai_logger.Logger(
+                name=logger.name, 
+                out_stream=log_file_lambda, 
+                verbose=logger.verbose
+            )
+            logger.log(f"Current Lambda is {Lambda} req/s")
             # set logger for methods
             if len(Heu_method) > 0:
                 Heu_method["parameters"]["log"] = lambda_logger
@@ -498,7 +501,7 @@ def main(dic, log_directory):
             feasible_found, solutions, result = MP.run(system_file)
             # feasibility, starting_points, result, S = Random_Greedy_run(json_object, method1)
             if not feasible_found:
-                error.log("No feasible solution is found by RG")
+                logger.err("No feasible solution is found by RG")
             else:
                 if Heu_method != {}:
                     Heu_method["parameters"]["starting_point"] = solutions
@@ -506,17 +509,14 @@ def main(dic, log_directory):
                     feasible_found, solutions, result = MP.run(system_file)
             # print result
             if result.solution is None:
-                logger.log("No solution is found.")
+                lambda_logger.log("No solution is found.")
             else:
                 generate_output_json(system_file, Lambda, result, logger)
             if log_directory != "":
-                general_log_file.close()
                 log_file_lambda.close()
 
 
 if __name__ == '__main__':
-
-    error = Logger(stream=sys.stderr, verbose=1, error=True)
 
     parser = argparse.ArgumentParser(description="SPACE4AI-D")
 
@@ -537,17 +537,36 @@ if __name__ == '__main__':
                         default="")
 
     args = parser.parse_args()
+
+    # initialize logger
+    logger = space4ai_logger.Logger(
+        name="SPACE4AI-D",
+        verbose=args.verbose
+    )
+
+    # check if the log directory exists and create it otherwise
+    if args.log_directory != "":
+        if os.path.exists(args.log_directory):
+            print("Directory {} already exists. Terminating...". \
+                  format(args.log_directory))
+            sys.exit(0)
+        else:
+            createFolder(args.log_directory)
+        general_log_file = os.path.join(args.log_directory, "LOG.log")
+        general_log_file = open(general_log_file, "a")
+        logger.out_stream = general_log_file
+
     dic = {}
     # check if the system configuration file exists
     if not os.path.exists(args.system_file):
-        error.log("{} does not exist".format(args.system_file))
+        logger.err("{} does not exist".format(args.system_file))
         sys.exit(1)
     else:
         dic["system_file"] = args.system_file
     # check if the test configuration file exists or we need an evaluation
     if args.evaluation_lambda is None:
         if not os.path.exists(args.config):
-            error.log("{} does not exist".format(args.config))
+            logger.err("{} does not exist".format(args.config))
             sys.exit(1)
         else:
             dic["config_file"] = args.config
@@ -560,25 +579,20 @@ if __name__ == '__main__':
             Lambda = float(args.evaluation_lambda[0])
             dic["Lambda"] = Lambda
         except ValueError:
-            error.log("{} must be a number".format(args.evaluation_lambda[0]))
+            logger.err("{} must be a number".format(args.evaluation_lambda[0]))
             sys.exit(1)
         if not os.path.exists(args.evaluation_lambda[1]):
-            error.log("{} (solution to evaluate) does not exist".format(args.evaluation_lambda[1]))
+            logger.err("{} (solution to evaluate) does not exist".format(args.evaluation_lambda[1]))
             sys.exit(1)
         else:
             solution_file = args.evaluation_lambda[1]
             dic["solution_file"] = solution_file
             dic["VerboseLevel"] = args.verbose
-    # check if the log directory exists and create it otherwise
-    if args.log_directory != "":
-        if os.path.exists(args.log_directory):
-            print("Directory {} already exists. Terminating...". \
-                  format(args.log_directory))
-            sys.exit(0)
-        else:
-            createFolder(args.log_directory)
 
-    main(dic, args.log_directory)
+    main(dic, logger, args.log_directory)
+
+    if args.log_directory != "":
+        general_log_file.close()
 
     '''dic = {}
     dic["system_file"] = "/Users/hamtasedghani/space4ai-d/Output_Files/paper_results/with_branches/SPACE4AI-D-AllMaterials/SPACE4AI-D-Zenodo/Heuristics_HyperOpt/Output_Files/strict_cons/Output_Files_1min_hyp_heu/large_scale/7Components/Ins1/system_description.json"
