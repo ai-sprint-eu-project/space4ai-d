@@ -26,7 +26,7 @@ ENV aMLLibrary_URL=${GITLAB}/ai-sprint/a-mllibrary.git
 ENV PROJECT_ID=776
 ENV PARSER_DIR=external/space4ai_parser
 ENV LOGGER_DIR=external/space4ai_logger
-ENV aMLLibrary_DIR=aMLLibrary
+ENV aMLLibrary_DIR=external/aMLLibrary
 
 # install aMLLibrary
 RUN git clone --recurse-submodules ${aMLLibrary_URL} ./${aMLLibrary_DIR}
