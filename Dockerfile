@@ -8,14 +8,11 @@ RUN python3 -m pip install --upgrade pip
 
 WORKDIR /home/SPACE4AI-D
 
-COPY ./Run_and_Evaluate_integrate_AISPRINT.py .
-COPY ./classes ./classes
-COPY ./requirements.txt .
-
 # copy existing external modules
 COPY ./external ./external
 
 # Install requirements for the SPACE4AI-D program
+COPY ./requirements.txt .
 RUN pip install -r ./requirements.txt
 
 # define parser, logger and aMLlibrary url
@@ -34,6 +31,10 @@ RUN pip install -r ./${aMLLibrary_DIR}/requirements.txt
 
 # install logger
 RUN git clone ${LOGGER_URL} ./${LOGGER_DIR}
+
+# import code
+COPY ./Run_and_Evaluate_integrate_AISPRINT.py .
+COPY ./classes ./classes
 
 ############################################################################
 #			build image for development
