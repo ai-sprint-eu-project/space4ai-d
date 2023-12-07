@@ -468,6 +468,12 @@ def main(application_dir):
             )
         )
         parser_yaml_generator.main_function()
+        # save system file before starting binary search
+        S.print_system(
+            system_file=os.path.join(
+                application_dir, "space4ai-d", "original_system.json"
+            )
+        )
         ################### find highest Lambda #######################
         BS_method["parameters"] = {}
         BS_method["parameters"][
