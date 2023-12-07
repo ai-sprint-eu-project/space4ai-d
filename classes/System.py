@@ -695,9 +695,15 @@ class System:
                 cloud_string += (CL.__str__(self.resources) + ',')
             else:
                 faas_string += (CL.__str__(self.resources) + ',')
-        system_string += (edge_string[:-1] + '}, \n' + \
-                          cloud_string[:-1] + '}, \n' + \
-                          faas_string[:-1] + '}')
+        if edge_string.endswith(","):
+            edge_string = edge_string[:-1]
+        if cloud_string.endswith(","):
+            cloud_string = cloud_string[:-1]
+        if faas_string.endswith(","):
+            faas_string = faas_string[:-1]
+        system_string += (edge_string + '}, \n' + \
+                          cloud_string + '}, \n' + \
+                          faas_string + '}')
                 
         # compatibility matrix
         system_string += (', \n"CompatibilityMatrix": ' + \
