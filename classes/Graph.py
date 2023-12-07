@@ -325,8 +325,8 @@ class Component():
             # object into a string
             #   @param self The object pointer
             def __str__(self):
-                s = '"{}": {{ "next":{}, "early_exit_probability":{}, "data_size":{}}}'.\
-                    format(self.name, '"'+self.Next+'"',
+                s = '"{}": {{"next":{}, "early_exit_probability":{}, "data_size":{}}}'.\
+                    format(self.name, str(self.Next).replace("'", '"'),
                            self.early_exit_probability, self.data_size)
                 return s
 
