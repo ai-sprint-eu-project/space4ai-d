@@ -746,9 +746,11 @@ class System:
         
         # global constraints
         system_string += ', \n"GlobalConstraints": {'
-        for GC in self.global_constraints:
-            system_string += (GC.__str__(self.components) + ',')
-        system_string = system_string[:-1] + '}'
+        if len(self.global_constraints) > 0:
+            for GC in self.global_constraints:
+                system_string += (GC.__str__(self.components) + ',')
+            system_string = system_string[:-1]
+        system_string += '}'
         
         # network technology
         system_string += ', \n"NetworkTechnology": {'
