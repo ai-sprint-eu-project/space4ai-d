@@ -52,7 +52,7 @@ run:
 IMG_TARGET=image-prod
 IMG_NAME=aisprint/space4ai-d
 IMG_TAG=23.06.29b
-PARSER_TAG=23.06.30
+PARSER_TAG=23.12.11
 docker build  --target ${IMG_TARGET} \
               --build-arg PARSER_TAG=${PARSER_TAG} \
               -t ${IMG_NAME}:${IMG_TAG} .
